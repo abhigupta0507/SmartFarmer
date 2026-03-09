@@ -1,1 +1,1 @@
-export { WeatherScreen as default } from '../../../screens/main/PlaceholderScreens';
+export { default } from "../../../screens/main/WeatherScreen";

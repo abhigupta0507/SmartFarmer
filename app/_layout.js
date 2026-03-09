@@ -4,35 +4,33 @@ import { Drawer } from "expo-router/drawer";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import DrawerContent from "../components/Sidebar/DrawerContent";
 
-// ── Route Guard ──────────────────────────────────────────────────────────────
-// Sits inside AuthProvider so it can safely call useAuth()
-function RouteGuard() {
-  const { isAuthenticated, isLoading } = useAuth();
+// ── Onboarding Guard ─────────────────────────────────────────────────────────
+// If the user hasn't set a name yet, send them to the profile setup screen.
+function OnboardingGuard() {
+  const { isProfileSet, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return; // wait for session restore
+    if (isLoading) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
+    const inSetup = segments[0] === "(setup)";
 
-    if (!isAuthenticated && !inAuthGroup) {
-      // Not logged in — redirect to login
-      router.replace("/(auth)/login");
-    } else if (isAuthenticated && inAuthGroup) {
-      // Already logged in — go to main app
-      router.replace("/(tabs)/");
+    if (!isProfileSet && !inSetup) {
+      router.replace("/(setup)/setup");
+    } else if (isProfileSet && inSetup) {
+      router.replace("/(main)/(tabs)/");
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isProfileSet, isLoading, segments]);
 
   return null;
 }
 
-// ── Root Layout ──────────────────────────────────────────────────────────────
+// ── Root Layout ───────────────────────────────────────────────────────────────
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RouteGuard />
+      <OnboardingGuard />
       <Drawer
         drawerContent={(props) => <DrawerContent {...props} />}
         screenOptions={{
@@ -43,21 +41,16 @@ export default function RootLayout() {
           swipeEdgeWidth: 80,
         }}
       >
-        {/* Hide the drawer entry for these route groups */}
         <Drawer.Screen
-          name="(tabs)"
+          name="(main)"
           options={{ drawerItemStyle: { display: "none" } }}
         />
         <Drawer.Screen
-          name="(auth)"
+          name="(setup)"
           options={{
             drawerItemStyle: { display: "none" },
             swipeEnabled: false,
           }}
-        />
-        <Drawer.Screen
-          name="(main)"
-          options={{ drawerItemStyle: { display: "none" } }}
         />
       </Drawer>
     </AuthProvider>

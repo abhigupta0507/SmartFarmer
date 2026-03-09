@@ -1,205 +1,268 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Alert,
-  TouchableOpacity, SafeAreaView,
-} from 'react-native';
-import { useAuth } from '../../context/AuthContext';
-import apiService from '../../services/api.service';
-import Input from '../../components/common/Input';
-import Button from '../../components/common/Button';
-import { COLORS } from '../../constants';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+} from "react-native";
+import { useAuth } from "../../context/AuthContext";
+import Input from "../../components/common/Input";
+import Button from "../../components/common/Button";
+import { COLORS, SHADOW, FONT, RADIUS } from "../../constants";
 
-const SectionHeader = ({ title }) => (
-  <Text style={styles.sectionHeader}>{title}</Text>
+const SectionLabel = ({ title }) => (
+  <Text style={styles.sectionLabel}>{title}</Text>
+);
+
+const InfoRow = ({ label, value }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value || "—"}</Text>
+  </View>
 );
 
 const ProfileScreen = () => {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateProfile, clearProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const [form, setForm] = useState({
-    fullName: user?.fullName || '',
-    address: user?.address || '',
-    district: user?.district || '',
-    state: user?.state || '',
-    dateOfBirth: user?.dateOfBirth
-      ? new Date(user.dateOfBirth).toISOString().split('T')[0]
-      : '',
+  const buildForm = (src) => ({
+    fullName: src?.fullName ?? "",
+    mobile: src?.mobile ?? "",
+    address: src?.address ?? "",
+    district: src?.district ?? "",
+    state: src?.state ?? "",
+    dateOfBirth: src?.dateOfBirth ?? "",
   });
 
+  const [form, setForm] = useState(() => buildForm(user));
+
   const updateField = (field) => (value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: null }));
+    setForm((p) => ({ ...p, [field]: value }));
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
   };
 
   const validate = () => {
-    const newErrors = {};
-    if (!form.fullName.trim()) newErrors.fullName = 'Full name is required';
-    if (!form.address.trim()) newErrors.address = 'Address is required';
-    if (!form.district.trim()) newErrors.district = 'District is required';
-    if (!form.state.trim()) newErrors.state = 'State is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!form.fullName.trim()) e.fullName = "Full name is required";
+    if (!form.address.trim()) e.address = "Address is required";
+    if (!form.district.trim()) e.district = "District is required";
+    if (!form.state.trim()) e.state = "State is required";
+    if (form.mobile.trim() && !/^\+?[1-9]\d{9,14}$/.test(form.mobile.trim()))
+      e.mobile = "Use format: +919876543210";
+    if (
+      form.dateOfBirth.trim() &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth.trim())
+    )
+      e.dateOfBirth = "Format: YYYY-MM-DD";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSave = async () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const response = await apiService.put('/users/me', form);
-      updateUser(response.data.user);
+      await updateProfile({
+        fullName: form.fullName.trim(),
+        mobile: form.mobile.trim(),
+        address: form.address.trim(),
+        district: form.district.trim(),
+        state: form.state.trim(),
+        dateOfBirth: form.dateOfBirth.trim(),
+      });
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      Alert.alert('Update Failed', error.message || 'Failed to update profile');
+      Alert.alert("Saved ✓", "Your profile has been updated.");
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to save.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancelEdit = () => {
-    setForm({
-      fullName: user?.fullName || '',
-      address: user?.address || '',
-      district: user?.district || '',
-      state: user?.state || '',
-      dateOfBirth: user?.dateOfBirth
-        ? new Date(user.dateOfBirth).toISOString().split('T')[0]
-        : '',
-    });
+  const handleCancel = () => {
+    setForm(buildForm(user));
     setErrors({});
     setIsEditing(false);
   };
 
-  const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: logout },
-    ]);
+  const handleReset = () => {
+    Alert.alert(
+      "Reset Profile",
+      "This will clear all saved data and return you to the setup screen.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Reset", style: "destructive", onPress: clearProfile },
+      ],
+    );
   };
+
+  const initials =
+    user?.fullName
+      ?.trim()
+      .split(" ")
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?";
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Avatar card */}
+        <View style={styles.avatarCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.fullName?.charAt(0)?.toUpperCase() || '?'}
-            </Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.name}>{user?.fullName}</Text>
+          <Text style={styles.userName}>{user?.fullName || "Farmer"}</Text>
+          {user?.district || user?.state ? (
+            <Text style={styles.userLocation}>
+              📍 {[user.district, user.state].filter(Boolean).join(", ")}
+            </Text>
+          ) : null}
           <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedText}>✓ Verified Farmer</Text>
+            <Text style={styles.verifiedText}>🌾 SmartFarmer</Text>
           </View>
         </View>
 
-        {/* Edit / Save buttons */}
-        <View style={styles.actionRow}>
-          {isEditing ? (
-            <>
-              <Button
-                title="Save Changes"
-                onPress={handleSave}
-                loading={loading}
-                style={styles.halfBtn}
-              />
-              <Button
-                title="Cancel"
-                onPress={handleCancelEdit}
-                variant="outline"
-                style={styles.halfBtn}
-              />
-            </>
-          ) : (
+        {/* Edit controls */}
+        {isEditing ? (
+          <View style={styles.editRow}>
             <Button
-              title="Edit Profile"
-              onPress={() => setIsEditing(true)}
+              title="Save Changes"
+              onPress={handleSave}
+              loading={loading}
+              style={{ flex: 1 }}
+              size="medium"
+            />
+            <Button
+              title="Cancel"
+              onPress={handleCancel}
               variant="outline"
               style={{ flex: 1 }}
+              size="medium"
             />
-          )}
+          </View>
+        ) : (
+          <Button
+            title="Edit Profile"
+            onPress={() => setIsEditing(true)}
+            variant="outline"
+            style={styles.editBtn}
+            size="medium"
+          />
+        )}
+
+        {/* View mode — clean info rows */}
+        {!isEditing ? (
+          <>
+            <SectionLabel title="Personal Info" />
+            <View style={styles.infoCard}>
+              <InfoRow label="Full Name" value={user?.fullName} />
+              <View style={styles.divider} />
+              <InfoRow label="Mobile" value={user?.mobile} />
+              <View style={styles.divider} />
+              <InfoRow label="Date of Birth" value={user?.dateOfBirth} />
+            </View>
+
+            <SectionLabel title="Location" />
+            <View style={styles.infoCard}>
+              <InfoRow label="Address" value={user?.address} />
+              <View style={styles.divider} />
+              <InfoRow label="District" value={user?.district} />
+              <View style={styles.divider} />
+              <InfoRow label="State" value={user?.state} />
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Edit mode — input fields */}
+            <SectionLabel title="Personal Info" />
+            <Input
+              label="Full Name *"
+              value={form.fullName}
+              onChangeText={updateField("fullName")}
+              error={errors.fullName}
+              autoCapitalize="words"
+            />
+            <Input
+              label="Mobile"
+              value={form.mobile}
+              onChangeText={updateField("mobile")}
+              error={errors.mobile}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              placeholder="+919876543210"
+            />
+            <Input
+              label="Date of Birth"
+              value={form.dateOfBirth}
+              onChangeText={updateField("dateOfBirth")}
+              error={errors.dateOfBirth}
+              keyboardType="numeric"
+              placeholder="YYYY-MM-DD"
+            />
+
+            <SectionLabel title="Location" />
+            <Input
+              label="Address *"
+              value={form.address}
+              onChangeText={updateField("address")}
+              error={errors.address}
+              multiline
+              numberOfLines={2}
+            />
+            <Input
+              label="District *"
+              value={form.district}
+              onChangeText={updateField("district")}
+              error={errors.district}
+              autoCapitalize="words"
+            />
+            <Input
+              label="State *"
+              value={form.state}
+              onChangeText={updateField("state")}
+              error={errors.state}
+              autoCapitalize="words"
+            />
+          </>
+        )}
+
+        {/* Settings */}
+        <SectionLabel title="Settings" />
+        <View style={styles.settingCard}>
+          <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+            <Text style={styles.settingEmoji}>🌐</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingTitle}>Language</Text>
+              <Text style={styles.settingValue}>English (Coming soon)</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Profile Fields */}
-        <SectionHeader title="Personal Information" />
-
-        <Input
-          label="Full Name"
-          value={form.fullName}
-          onChangeText={updateField('fullName')}
-          editable={isEditing}
-          error={errors.fullName}
-          autoCapitalize="words"
-        />
-
-        {/* Mobile — always read-only */}
-        <Input
-          label="Mobile Number"
-          value={user?.mobile || ''}
-          editable={false}
-          rightIcon={<Text style={styles.lockedIcon}>🔒</Text>}
-        />
-
-        <Input
-          label="Date of Birth"
-          value={form.dateOfBirth}
-          onChangeText={updateField('dateOfBirth')}
-          editable={isEditing}
-          keyboardType="numeric"
-          placeholder="YYYY-MM-DD"
-        />
-
-        <SectionHeader title="Location" />
-
-        <Input
-          label="Address"
-          value={form.address}
-          onChangeText={updateField('address')}
-          editable={isEditing}
-          error={errors.address}
-          multiline
-          numberOfLines={2}
-        />
-        <Input
-          label="District"
-          value={form.district}
-          onChangeText={updateField('district')}
-          editable={isEditing}
-          error={errors.district}
-        />
-        <Input
-          label="State"
-          value={form.state}
-          onChangeText={updateField('state')}
-          editable={isEditing}
-          error={errors.state}
-        />
-
-        {/* Settings Section */}
-        <SectionHeader title="Settings" />
-
-        {/* Language — placeholder for Azure integration */}
-        <TouchableOpacity style={styles.settingRow}>
-          <Text style={styles.settingIcon}>🌐</Text>
-          <View style={styles.settingText}>
-            <Text style={styles.settingTitle}>Language</Text>
-            <Text style={styles.settingValue}>English (Coming Soon)</Text>
-          </View>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
-
-        {/* Sign Out */}
+        {/* Danger */}
+        <SectionLabel title="Danger Zone" />
         <Button
-          title="Sign Out"
-          onPress={handleLogout}
+          title="Reset Profile & Data"
+          onPress={handleReset}
           variant="danger"
-          style={styles.logoutBtn}
+          size="medium"
+          style={styles.dangerBtn}
         />
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -207,41 +270,101 @@ const ProfileScreen = () => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
-  container: { flex: 1, padding: 20 },
-  avatarSection: { alignItems: 'center', marginBottom: 20, marginTop: 8 },
+  scroll: { flex: 1 },
+  content: { padding: 20, paddingTop: 12 },
+
+  avatarCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    marginBottom: 16,
+    ...SHADOW.sm,
+  },
   avatar: {
-    width: 80, height: 80, borderRadius: 40,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
-  avatarText: { fontSize: 32, fontWeight: '800', color: '#fff' },
-  name: { fontSize: 20, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
+  avatarText: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  userName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  userLocation: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 10 },
   verifiedBadge: {
-    backgroundColor: '#E8F5E9', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 4,
+    backgroundColor: COLORS.primaryFaded,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
   },
-  verifiedText: { color: COLORS.primary, fontSize: 12, fontWeight: '600' },
-  actionRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  halfBtn: { flex: 1 },
-  sectionHeader: {
-    fontSize: 13, fontWeight: '700', color: COLORS.textMuted,
-    textTransform: 'uppercase', letterSpacing: 1,
-    marginBottom: 12, marginTop: 8,
+  verifiedText: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
+
+  editBtn: { marginBottom: 20 },
+  editRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginTop: 6,
   },
-  lockedIcon: { fontSize: 16 },
+
+  infoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    ...SHADOW.sm,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  infoLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: COLORS.textPrimary,
+    flex: 2,
+    textAlign: "right",
+  },
+  divider: { height: 1, backgroundColor: COLORS.border },
+
+  settingCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    marginBottom: 16,
+    ...SHADOW.sm,
+  },
   settingRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface, borderRadius: 12,
-    padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: COLORS.border,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
   },
-  settingIcon: { fontSize: 22, marginRight: 14 },
-  settingText: { flex: 1 },
-  settingTitle: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-  settingValue: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  settingEmoji: { fontSize: 20 },
+  settingTitle: { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary },
+  settingValue: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   settingArrow: { fontSize: 20, color: COLORS.textMuted },
-  logoutBtn: { marginTop: 8 },
+
+  dangerBtn: { marginBottom: 8 },
 });
 
 export default ProfileScreen;

@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View, TextInput, Text, TouchableOpacity, StyleSheet
-} from 'react-native';
-import { COLORS } from '../../constants';
+  View,
+  TextInput,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { COLORS, RADIUS, FONT } from "../../constants";
 
 const Input = ({
   label,
@@ -11,8 +15,8 @@ const Input = ({
   placeholder,
   secureTextEntry,
   error,
-  keyboardType = 'default',
-  autoCapitalize = 'sentences',
+  keyboardType = "default",
+  autoCapitalize = "sentences",
   editable = true,
   leftIcon,
   rightIcon,
@@ -26,14 +30,16 @@ const Input = ({
 
   return (
     <View style={[styles.wrapper, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[
-        styles.inputContainer,
-        isFocused && styles.focused,
-        error && styles.errorBorder,
-        !editable && styles.disabled,
-      ]}>
-        {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <View
+        style={[
+          styles.container,
+          isFocused && styles.focused,
+          error && styles.errorBorder,
+          !editable && styles.disabled,
+        ]}
+      >
+        {leftIcon ? <View style={styles.leftIcon}>{leftIcon}</View> : null}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -47,51 +53,73 @@ const Input = ({
           numberOfLines={numberOfLines}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          style={[styles.input, !editable && styles.disabledText]}
+          style={[
+            styles.input,
+            !editable && styles.disabledText,
+            multiline && styles.multiline,
+          ]}
           {...props}
         />
-        {rightIcon && (
-          <TouchableOpacity onPress={onRightIconPress} style={styles.rightIcon}>
+        {rightIcon ? (
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            style={styles.rightIcon}
+            activeOpacity={0.7}
+          >
             {rightIcon}
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: { marginBottom: 16 },
+  wrapper: { marginBottom: 14 },
+
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: FONT.semibold,
+    color: COLORS.textSecondary,
     marginBottom: 6,
+    letterSpacing: 0.2,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.inputBg,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     borderWidth: 1.5,
     borderColor: COLORS.border,
     paddingHorizontal: 14,
     minHeight: 50,
   },
-  focused: { borderColor: COLORS.primary, backgroundColor: '#fff' },
+  focused: { borderColor: COLORS.primary, backgroundColor: COLORS.surface },
   errorBorder: { borderColor: COLORS.error },
-  disabled: { backgroundColor: '#EBEBEB', opacity: 0.8 },
+  disabled: { backgroundColor: "#ECECEC", opacity: 0.75 },
+
   input: {
     flex: 1,
     fontSize: 15,
+    fontWeight: FONT.regular,
     color: COLORS.textPrimary,
     paddingVertical: 12,
   },
-  disabledText: { color: COLORS.textSecondary },
+  disabledText: { color: COLORS.textMuted },
+  multiline: { textAlignVertical: "top", paddingTop: 12 },
+
   leftIcon: { marginRight: 10 },
-  rightIcon: { marginLeft: 10 },
-  errorText: { fontSize: 12, color: COLORS.error, marginTop: 4, marginLeft: 4 },
+  rightIcon: { marginLeft: 10, padding: 2 },
+
+  errorText: {
+    fontSize: 12,
+    fontWeight: FONT.medium,
+    color: COLORS.error,
+    marginTop: 5,
+    marginLeft: 2,
+  },
 });
 
 export default Input;

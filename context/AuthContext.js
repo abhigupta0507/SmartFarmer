@@ -1,118 +1,132 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import authService from '../services/auth.service';
-import apiService from '../services/api.service';
-import { STORAGE_KEYS } from '../constants';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useCallback,
+} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ── State & Reducer ──────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
+const PROFILE_KEY = "farmer_profile";
 
-const initialState = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: true, // true on app start while checking stored session
+const DEFAULT_PROFILE = {
+  fullName: "",
+  mobile: "",
+  address: "",
+  district: "",
+  state: "",
+  dateOfBirth: "",
+  preferredLanguage: "en",
+  profilePicture: null,
 };
 
-const AuthReducer = (state, action) => {
+// ── State & Reducer ──────────────────────────────────────────────────────────
+const initialState = {
+  profile: null, // null = not yet loaded from storage
+  isProfileSet: false, // true once user has filled in their details
+  isLoading: true,
+};
+
+const reducer = (state, action) => {
   switch (action.type) {
-    case 'SET_LOADING':
+    case "SET_LOADING":
       return { ...state, isLoading: action.payload };
-    case 'LOGIN_SUCCESS':
-      return { ...state, user: action.payload, isAuthenticated: true, isLoading: false };
-    case 'UPDATE_USER':
-      return { ...state, user: { ...state.user, ...action.payload } };
-    case 'LOGOUT':
-      return { ...initialState, isLoading: false };
+
+    case "LOAD_PROFILE":
+      return {
+        ...state,
+        profile: action.payload,
+        isProfileSet: !!action.payload?.fullName,
+        isLoading: false,
+      };
+
+    case "UPDATE_PROFILE":
+      return {
+        ...state,
+        profile: { ...state.profile, ...action.payload },
+        isProfileSet: true,
+      };
+
+    case "CLEAR_PROFILE":
+      return {
+        ...initialState,
+        isLoading: false,
+        profile: DEFAULT_PROFILE,
+        isProfileSet: false,
+      };
+
     default:
       return state;
   }
 };
 
 // ── Context ──────────────────────────────────────────────────────────────────
-
-const AuthContext = createContext(null);
+const ProfileContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(AuthReducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  // On app mount: restore session if tokens exist
+  // Load profile from AsyncStorage on mount
   useEffect(() => {
-    restoreSession();
+    loadProfile();
   }, []);
 
-  const restoreSession = async () => {
+  const loadProfile = async () => {
     try {
-      const isAuth = await authService.isAuthenticated();
-      if (isAuth) {
-        // Fetch fresh profile from API to validate token
-        const response = await apiService.get('/users/me');
-        dispatch({ type: 'LOGIN_SUCCESS', payload: response.data.user });
-      } else {
-        dispatch({ type: 'SET_LOADING', payload: false });
-      }
-    } catch (error) {
-      // Token invalid or expired — clear and go to login
-      await authService._clearSession();
-      dispatch({ type: 'LOGOUT' });
+      const raw = await AsyncStorage.getItem(PROFILE_KEY);
+      const profile = raw ? JSON.parse(raw) : { ...DEFAULT_PROFILE };
+      dispatch({ type: "LOAD_PROFILE", payload: profile });
+    } catch {
+      dispatch({ type: "LOAD_PROFILE", payload: { ...DEFAULT_PROFILE } });
     }
   };
 
-  const register = useCallback(async (userData) => {
-    return authService.register(userData);
-  }, []);
-
-  const verifyRegistration = useCallback(async (mobile, otp) => {
-    const response = await authService.verifyRegistration(mobile, otp);
-    dispatch({ type: 'LOGIN_SUCCESS', payload: response.data.user });
-    return response;
-  }, []);
-
-  const sendLoginOTP = useCallback(async (mobile) => {
-    return authService.sendLoginOTP(mobile);
-  }, []);
-
-  const verifyLogin = useCallback(async (mobile, otp) => {
-    const response = await authService.verifyLogin(mobile, otp);
-    dispatch({ type: 'LOGIN_SUCCESS', payload: response.data.user });
-    return response;
-  }, []);
-
-  const updateUser = useCallback((updatedFields) => {
-    dispatch({ type: 'UPDATE_USER', payload: updatedFields });
-    // Also sync to AsyncStorage
-    AsyncStorage.getItem(STORAGE_KEYS.USER).then((stored) => {
-      if (stored) {
-        const user = { ...JSON.parse(stored), ...updatedFields };
-        AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  /**
+   * Save / update profile fields and persist to AsyncStorage
+   */
+  const updateProfile = useCallback(
+    async (fields) => {
+      try {
+        const current = state.profile ?? { ...DEFAULT_PROFILE };
+        const updated = { ...current, ...fields };
+        await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+        dispatch({ type: "UPDATE_PROFILE", payload: fields });
+        return updated;
+      } catch (err) {
+        throw new Error("Failed to save profile. Please try again.");
       }
-    });
-  }, []);
+    },
+    [state.profile],
+  );
 
-  const logout = useCallback(async () => {
-    await authService.logout();
-    dispatch({ type: 'LOGOUT' });
-    // Expo Router's RouteGuard in _layout.js will redirect to /(auth)/login
-    // automatically when isAuthenticated becomes false
+  /**
+   * Wipe local profile (acts as "logout" / reset)
+   */
+  const clearProfile = useCallback(async () => {
+    await AsyncStorage.removeItem(PROFILE_KEY);
+    dispatch({ type: "CLEAR_PROFILE" });
   }, []);
 
   return (
-    <AuthContext.Provider
+    <ProfileContext.Provider
       value={{
         ...state,
-        register,
-        verifyRegistration,
-        sendLoginOTP,
-        verifyLogin,
-        updateUser,
-        logout,
+        // Alias `profile` as `user` so existing components need minimal changes
+        user: state.profile,
+        updateProfile,
+        updateUser: updateProfile, // backward-compat alias
+        clearProfile,
+        logout: clearProfile, // backward-compat alias
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </ProfileContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
+  const ctx = useContext(ProfileContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
 };

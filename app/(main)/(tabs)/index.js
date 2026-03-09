@@ -1,1 +1,1 @@
-export { default } from '../../../screens/main/PestDetectionScreen';
+export { default } from "../../../screens/main/DashboardScreen";

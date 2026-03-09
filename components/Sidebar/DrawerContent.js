@@ -4,178 +4,198 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import { COLORS } from "../../constants";
+import { COLORS, FONT } from "../../constants";
 
-const MenuItem = ({ emoji, label, onPress, danger }) => (
+const NavItem = ({ emoji, label, onPress, isActive }) => (
   <TouchableOpacity
-    style={styles.menuItem}
+    style={[styles.navItem, isActive && styles.navItemActive]}
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <Text style={styles.menuEmoji}>{emoji}</Text>
-    <Text style={[styles.menuLabel, danger && styles.dangerText]}>{label}</Text>
+    <Text style={styles.navEmoji}>{emoji}</Text>
+    <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+      {label}
+    </Text>
+    {isActive && <View style={styles.activeDot} />}
   </TouchableOpacity>
+);
+
+const SectionLabel = ({ title }) => (
+  <Text style={styles.sectionLabel}>{title}</Text>
 );
 
 const DrawerContent = () => {
   const router = useRouter();
+  const { user } = useAuth();
 
-  // Safe call — DrawerContent renders inside Drawer which is inside AuthProvider
-  // but guard against any edge-case timing issues
-  let user = null;
-  let logout = () => {};
-  try {
-    const auth = useAuth();
-    user = auth.user;
-    logout = auth.logout;
-  } catch (_) {}
+  const navigate = (path) => router.push(path);
 
-  const handleLogout = () => {
-    Alert.alert("Sign Out", "Sign out from your account?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: logout },
-    ]);
-  };
+  const initials =
+    user?.fullName
+      ?.trim()
+      .split(" ")
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?";
 
-  // Routes are relative to the Drawer root (app/_layout.js), so
-  // (main) group is at /(main)/... and tabs are at /(main)/(tabs)/...
-  const navigate = (path) => {
-    router.push(path);
-  };
+  const locationLine = [user?.district, user?.state].filter(Boolean).join(", ");
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      {/* User info */}
-      <View style={styles.userSection}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Profile header */}
+      <View style={styles.profileSection}>
+        <StatusBar barStyle="light-content" />
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
-          </Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <Text style={styles.userName} numberOfLines={1}>
           {user?.fullName || "Farmer"}
         </Text>
-        <Text style={styles.userMobile}>{user?.mobile}</Text>
-        <Text style={styles.userLocation}>
-          📍 {user?.district}, {user?.state}
-        </Text>
+        {user?.mobile ? (
+          <Text style={styles.userMobile}>{user.mobile}</Text>
+        ) : null}
+        {locationLine ? (
+          <View style={styles.locationRow}>
+            <Text style={styles.locationPin}>📍</Text>
+            <Text style={styles.locationText}>{locationLine}</Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* Divider */}
-      <View style={styles.divider} />
+      {/* Nav */}
+      <View style={styles.nav}>
+        <SectionLabel title="Main" />
+        <NavItem
+          emoji="🏠"
+          label="Dashboard"
+          onPress={() => navigate("/(main)/(tabs)/")}
+        />
+        <NavItem
+          emoji="🌤️"
+          label="Weather"
+          onPress={() => navigate("/(main)/(tabs)/weather")}
+        />
+        <NavItem
+          emoji="🛒"
+          label="Market Prices"
+          onPress={() => navigate("/(main)/(tabs)/market")}
+        />
+        <NavItem
+          emoji="📊"
+          label="Crop Advisory"
+          onPress={() => navigate("/(main)/(tabs)/advisory")}
+        />
 
-      {/* Navigation items */}
-      <Text style={styles.sectionLabel}>MAIN</Text>
-      <MenuItem
-        emoji="🏠"
-        label="Dashboard"
-        onPress={() => navigate("/(main)/(tabs)/")}
-      />
-      <MenuItem
-        emoji="🔍"
-        label="Pest Detection"
-        onPress={() => navigate("/(main)/(tabs)/")}
-      />
-      <MenuItem
-        emoji="🌤️"
-        label="Weather"
-        onPress={() => navigate("/(main)/(tabs)/weather")}
-      />
-      <MenuItem
-        emoji="🛒"
-        label="Market Prices"
-        onPress={() => navigate("/(main)/(tabs)/market")}
-      />
-      <MenuItem
-        emoji="📊"
-        label="Crop Advisory"
-        onPress={() => navigate("/(main)/(tabs)/advisory")}
-      />
+        <View style={styles.divider} />
 
-      <View style={styles.divider} />
+        <SectionLabel title="Account" />
+        <NavItem
+          emoji="👤"
+          label="My Profile"
+          onPress={() => navigate("/(main)/(tabs)/profile")}
+        />
+        <NavItem emoji="🌐" label="Language" onPress={() => {}} />
+        <NavItem emoji="❓" label="Help & Support" onPress={() => {}} />
+      </View>
 
-      <Text style={styles.sectionLabel}>ACCOUNT</Text>
-      <MenuItem
-        emoji="👤"
-        label="My Profile"
-        onPress={() => navigate("/(main)/(tabs)/profile")}
-      />
-      <MenuItem
-        emoji="🌐"
-        label="Language"
-        onPress={() => {
-          /* Azure — coming soon */
-        }}
-      />
-      <MenuItem emoji="❓" label="Help & Support" onPress={() => {}} />
-
-      <View style={styles.divider} />
-
-      <MenuItem emoji="🚪" label="Sign Out" onPress={handleLogout} danger />
-
-      {/* App version */}
       <Text style={styles.version}>SmartFarmer v1.0.0</Text>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: COLORS.surface },
   container: { flexGrow: 1, paddingBottom: 32 },
-  userSection: {
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: COLORS.primary,
+
+  profileSection: {
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 24,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(255,255,255,0.22)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.3)",
   },
-  avatarText: { fontSize: 26, fontWeight: "800", color: "#fff" },
-  userName: { fontSize: 17, fontWeight: "800", color: "#fff", marginBottom: 3 },
-  userMobile: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginBottom: 4 },
-  userLocation: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
+  avatarText: { fontSize: 24, fontWeight: "800", color: "#fff" },
+  userName: { fontSize: 18, fontWeight: "800", color: "#fff", marginBottom: 3 },
+  userMobile: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 6 },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  locationPin: { fontSize: 12 },
+  locationText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.75)",
+  },
+
+  nav: { padding: 12 },
+
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginLeft: 12,
+    marginBottom: 4,
+    marginTop: 8,
+  },
+
+  navItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 2,
+    position: "relative",
+  },
+  navItemActive: {
+    backgroundColor: COLORS.primaryFaded,
+  },
+  navEmoji: { fontSize: 19, width: 30, textAlign: "center", marginRight: 12 },
+  navLabel: { fontSize: 15, fontWeight: "500", color: COLORS.textPrimary },
+  navLabelActive: { fontWeight: "700", color: COLORS.primaryDark },
+  activeDot: {
+    position: "absolute",
+    right: 12,
+    top: "50%",
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
+    marginTop: -3,
+  },
+
   divider: {
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 8,
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: COLORS.textMuted,
-    letterSpacing: 1,
-    marginLeft: 20,
-    marginBottom: 4,
-    marginTop: 8,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginHorizontal: 8,
-  },
-  menuEmoji: { fontSize: 20, marginRight: 14, width: 26, textAlign: "center" },
-  menuLabel: { fontSize: 15, fontWeight: "500", color: COLORS.textPrimary },
-  dangerText: { color: COLORS.error },
+
   version: {
     textAlign: "center",
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 20,
+    marginTop: 24,
   },
 });
 

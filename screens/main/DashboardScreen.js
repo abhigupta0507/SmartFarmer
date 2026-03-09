@@ -1,98 +1,150 @@
-import React from 'react';
+import React from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS } from '../../constants';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../context/AuthContext";
+import { COLORS, SHADOW, FONT, RADIUS } from "../../constants";
 
-const QuickActionCard = ({ emoji, title, subtitle, onPress, color }) => (
-  <TouchableOpacity style={[styles.card, { borderLeftColor: color }]} onPress={onPress} activeOpacity={0.85}>
-    <Text style={styles.cardEmoji}>{emoji}</Text>
-    <View style={styles.cardText}>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardSubtitle}>{subtitle}</Text>
-    </View>
-    <Text style={styles.cardArrow}>›</Text>
-  </TouchableOpacity>
-);
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning,";
+  if (h < 17) return "Good Afternoon,";
+  return "Good Evening,";
+};
 
-const StatBox = ({ value, label, emoji }) => (
-  <View style={styles.statBox}>
+const StatCard = ({ emoji, value, label, bg }) => (
+  <View style={[styles.statCard, { backgroundColor: bg }]}>
     <Text style={styles.statEmoji}>{emoji}</Text>
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
 
+const ActionCard = ({ emoji, title, subtitle, accentColor, onPress }) => (
+  <TouchableOpacity
+    style={[styles.actionCard, { borderLeftColor: accentColor }]}
+    onPress={onPress}
+    activeOpacity={0.82}
+  >
+    <View
+      style={[styles.actionIconBox, { backgroundColor: accentColor + "1A" }]}
+    >
+      <Text style={styles.actionEmoji}>{emoji}</Text>
+    </View>
+    <View style={styles.actionText}>
+      <Text style={styles.actionTitle}>{title}</Text>
+      <Text style={styles.actionSub}>{subtitle}</Text>
+    </View>
+    <Text style={styles.actionArrow}>›</Text>
+  </TouchableOpacity>
+);
+
 const DashboardScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
+  const firstName = user?.fullName?.trim().split(" ")[0] || "Farmer";
+  const locationLine = [user?.district, user?.state].filter(Boolean).join(", ");
 
-  const firstName = user?.fullName?.split(' ')[0] || 'Farmer';
-
-  // Opens the drawer via Expo Router's built-in navigation ref
-  const openDrawer = () => {
-    router.push('/(main)');
-  };
+  const actions = [
+    {
+      emoji: "🔍",
+      title: "Pest Detection",
+      subtitle: "Scan crop for disease & pests",
+      color: COLORS.error,
+      route: "/(main)/(tabs)/pest-detection",
+    },
+    {
+      emoji: "🌤️",
+      title: "Weather Forecast",
+      subtitle: "7-day hyperlocal forecast",
+      color: "#0288D1",
+      route: "/(main)/(tabs)/weather",
+    },
+    {
+      emoji: "📊",
+      title: "Crop Advisory",
+      subtitle: "Expert recommendations",
+      color: COLORS.primary,
+      route: "/(main)/(tabs)/advisory",
+    },
+    {
+      emoji: "🛒",
+      title: "Market Prices",
+      subtitle: "Today's mandi rates",
+      color: COLORS.secondary,
+      route: "/(main)/(tabs)/market",
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Greeting */}
-        <View style={styles.greeting}>
-          <View>
-            <Text style={styles.greetingText}>Good Morning,</Text>
-            <Text style={styles.greetingName}>{firstName} 👋</Text>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.name}>{firstName} 👋</Text>
+            {locationLine ? (
+              <View style={styles.locRow}>
+                <Text style={styles.locPin}>📍</Text>
+                <Text style={styles.locText}>{locationLine}</Text>
+              </View>
+            ) : null}
           </View>
-          <TouchableOpacity onPress={openDrawer} style={styles.menuBtn}>
-            <Text style={styles.menuIcon}>☰</Text>
+          <TouchableOpacity
+            onPress={() => router.push("/(main)")}
+            style={styles.menuBtn}
+            activeOpacity={0.7}
+          >
+            <View style={styles.menuBar} />
+            <View style={[styles.menuBar, { width: 16 }]} />
+            <View style={styles.menuBar} />
           </TouchableOpacity>
-        </View>
-
-        {/* Location badge */}
-        <View style={styles.locationBadge}>
-          <Text style={styles.locationText}>📍 {user?.district}, {user?.state}</Text>
         </View>
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatBox value="3" label="Active Crops" emoji="🌱" />
-          <StatBox value="0" label="Alerts" emoji="⚠️" />
-          <StatBox value="—" label="Weather" emoji="☀️" />
+          <StatCard
+            emoji="🌱"
+            value="3"
+            label="Crops"
+            bg={COLORS.primaryFaded}
+          />
+          <StatCard
+            emoji="⚠️"
+            value="0"
+            label="Alerts"
+            bg={COLORS.secondaryFaded}
+          />
+          <StatCard emoji="💧" value="72%" label="Humidity" bg="#E3F2FD" />
         </View>
 
-        {/* Quick Actions */}
+        {/* Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
+        {actions.map((a) => (
+          <ActionCard
+            key={a.title}
+            emoji={a.emoji}
+            title={a.title}
+            subtitle={a.subtitle}
+            accentColor={a.color}
+            onPress={() => router.push(a.route)}
+          />
+        ))}
 
-        <QuickActionCard
-          emoji="🔍"
-          title="Pest Detection"
-          subtitle="Scan your crop for pests"
-          color={COLORS.error}
-          onPress={() => router.push('/(main)/pest-detection')}
-        />
-        <QuickActionCard
-          emoji="🌤️"
-          title="Weather Forecast"
-          subtitle="Check local weather"
-          color={COLORS.secondary}
-          onPress={() => router.push('/(main)/weather')}
-        />
-        <QuickActionCard
-          emoji="📊"
-          title="Crop Advisory"
-          subtitle="Get expert recommendations"
-          color={COLORS.primary}
-          onPress={() => router.push('/(main)/advisory')}
-        />
-        <QuickActionCard
-          emoji="🛒"
-          title="Market Prices"
-          subtitle="Today's mandi rates"
-          color={COLORS.primaryLight}
-          onPress={() => router.push('/(main)/market')}
-        />
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -100,67 +152,109 @@ const DashboardScreen = () => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
-  container: { flex: 1, padding: 20 },
+  scroll: { flex: 1 },
+  content: { padding: 20, paddingTop: 12 },
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  headerLeft: { flex: 1, paddingRight: 12 },
   greeting: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "500",
+    color: COLORS.textMuted,
+    marginBottom: 2,
   },
-  greetingText: { fontSize: 14, color: COLORS.textSecondary },
-  greetingName: { fontSize: 24, fontWeight: '800', color: COLORS.textPrimary },
-  menuBtn: { padding: 8 },
-  menuIcon: { fontSize: 22 },
-  locationBadge: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-    marginBottom: 20,
+  name: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    marginBottom: 6,
   },
-  locationText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '600' },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 28,
-  },
-  statBox: {
-    flex: 1,
+  locRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  locPin: { fontSize: 12 },
+  locText: { fontSize: 12, fontWeight: "600", color: COLORS.textSecondary },
+
+  menuBtn: {
+    width: 44,
+    height: 44,
     backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    ...SHADOW.sm,
+  },
+  menuBar: {
+    width: 20,
+    height: 2,
+    backgroundColor: COLORS.textPrimary,
+    borderRadius: 2,
+  },
+
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: 28 },
+  statCard: {
+    flex: 1,
     borderRadius: 14,
     padding: 14,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    alignItems: "center",
+    ...SHADOW.sm,
   },
-  statEmoji: { fontSize: 22, marginBottom: 4 },
-  statValue: { fontSize: 20, fontWeight: '800', color: COLORS.textPrimary },
-  statLabel: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, textAlign: 'center' },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 14 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  statEmoji: { fontSize: 20, marginBottom: 6 },
+  statValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    textAlign: "center",
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 12,
+    letterSpacing: 0.2,
+  },
+
+  actionCard: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.surface,
     borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
+    padding: 15,
+    marginBottom: 10,
     borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    gap: 14,
+    ...SHADOW.sm,
   },
-  cardEmoji: { fontSize: 28, marginRight: 14 },
-  cardText: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 2 },
-  cardSubtitle: { fontSize: 12, color: COLORS.textSecondary },
-  cardArrow: { fontSize: 22, color: COLORS.textMuted },
+  actionIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionEmoji: { fontSize: 22 },
+  actionText: { flex: 1 },
+  actionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 2,
+  },
+  actionSub: { fontSize: 12, color: COLORS.textSecondary },
+  actionArrow: { fontSize: 24, color: COLORS.textMuted },
 });
 
 export default DashboardScreen;

@@ -1,41 +1,99 @@
-import React from 'react';
+import React from "react";
 import {
-  TouchableOpacity, Text, ActivityIndicator, StyleSheet, View
-} from 'react-native';
-import { COLORS } from '../../constants';
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  View,
+} from "react-native";
+import { COLORS, RADIUS, FONT } from "../../constants";
+
+const VARIANTS = {
+  primary: {
+    bg: COLORS.primary,
+    text: "#fff",
+    border: COLORS.primary,
+  },
+  secondary: {
+    bg: COLORS.secondary,
+    text: "#fff",
+    border: COLORS.secondary,
+  },
+  outline: {
+    bg: "transparent",
+    text: COLORS.primary,
+    border: COLORS.primary,
+  },
+  ghost: {
+    bg: "transparent",
+    text: COLORS.primary,
+    border: "transparent",
+  },
+  danger: {
+    bg: COLORS.error,
+    text: "#fff",
+    border: COLORS.error,
+  },
+  surface: {
+    bg: COLORS.surface,
+    text: COLORS.textPrimary,
+    border: COLORS.border,
+  },
+};
+
+const SIZES = {
+  small: { px: 16, py: 8, fontSize: 13, height: 38 },
+  medium: { px: 20, py: 13, fontSize: 15, height: 48 },
+  large: { px: 24, py: 15, fontSize: 16, height: 54 },
+};
 
 const Button = ({
   title,
   onPress,
   loading = false,
   disabled = false,
-  variant = 'primary',
-  size = 'medium',
+  variant = "primary",
+  size = "medium",
   style,
   textStyle,
   leftIcon,
+  fullWidth = true,
 }) => {
+  const v = VARIANTS[variant] ?? VARIANTS.primary;
+  const s = SIZES[size] ?? SIZES.medium;
   const isDisabled = disabled || loading;
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8}
+      activeOpacity={0.78}
       style={[
         styles.base,
-        styles[variant],
-        styles[size],
+        {
+          backgroundColor: v.bg,
+          borderColor: v.border,
+          paddingHorizontal: s.px,
+          paddingVertical: s.py,
+          height: s.height,
+          alignSelf: fullWidth ? "stretch" : "auto",
+        },
         isDisabled && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? COLORS.primary : '#fff'} />
+        <ActivityIndicator color={v.text} size="small" />
       ) : (
-        <View style={styles.content}>
-          {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
-          <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
+        <View style={styles.inner}>
+          {leftIcon ? <View style={styles.leftIcon}>{leftIcon}</View> : null}
+          <Text
+            style={[
+              styles.text,
+              { color: v.text, fontSize: s.fontSize },
+              textStyle,
+            ]}
+          >
             {title}
           </Text>
         </View>
@@ -46,47 +104,22 @@ const Button = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  content: { flexDirection: 'row', alignItems: 'center' },
-  leftIcon: { marginRight: 8 },
-
-  // Variants
-  primary: { backgroundColor: COLORS.primary },
-  secondary: { backgroundColor: COLORS.secondary },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+  inner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: COLORS.error },
-
-  // Sizes
-  small: { paddingHorizontal: 16, paddingVertical: 8 },
-  medium: { paddingHorizontal: 24, paddingVertical: 14 },
-  large: { paddingHorizontal: 32, paddingVertical: 16 },
-
-  // Disabled
-  disabled: { opacity: 0.5 },
-
-  // Text base
-  text: { fontWeight: '700', letterSpacing: 0.3 },
-
-  // Variant texts
-  primaryText: { color: '#fff' },
-  secondaryText: { color: '#fff' },
-  outlineText: { color: COLORS.primary },
-  ghostText: { color: COLORS.primary },
-  dangerText: { color: '#fff' },
-
-  // Size texts
-  smallText: { fontSize: 13 },
-  mediumText: { fontSize: 15 },
-  largeText: { fontSize: 17 },
+  leftIcon: {},
+  text: {
+    fontWeight: FONT.bold,
+    letterSpacing: 0.2,
+  },
+  disabled: { opacity: 0.48 },
 });
 
 export default Button;
