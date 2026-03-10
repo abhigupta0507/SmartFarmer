@@ -75,6 +75,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
         }}
       />
+
+      <Tabs.Screen
+        name="edgeai"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }
