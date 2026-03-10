@@ -53,8 +53,12 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Hide advisory from tabs (accessible via drawer/dashboard) */}
-      <Tabs.Screen name="advisory" options={{ href: null }} />
+      <Tabs.Screen
+        name="edgeai"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }

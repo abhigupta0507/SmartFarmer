@@ -54,8 +54,12 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Keep advisory registered but hidden from tab bar */}
-      <Tabs.Screen name="advisory" options={{ href: null }} />
+      <Tabs.Screen
+          name="edgeai"
+          options={{
+            tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" focused={focused} />,
+          }}
+        />
     </Tabs>
   );
 }
